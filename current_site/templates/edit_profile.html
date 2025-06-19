@@ -1,0 +1,50 @@
+{% extends 'base.html' %}
+{% block title %}Редактировать профиль | Currencio{% endblock %}
+{% block content %}
+<div class="edit-profile-card" style="max-width: 420px; margin: 40px auto; background: #fff; border-radius: 18px; box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 2.5rem 2rem 2rem 2rem;">
+    <h2 style="text-align:center; margin-bottom: 1.5rem;"><i class="bi bi-person-circle"></i> Редактировать профиль</h2>
+    <form method="post" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 1.2rem;">
+        {% csrf_token %}
+        <div style="display: flex; flex-direction: column; gap: 0.7rem;">
+            <label for="id_username" style="font-weight: 500;">Никнейм</label>
+            {{ form.username }}
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.7rem;">
+            <label for="id_email" style="font-weight: 500;">Email</label>
+            {{ form.email }}
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.7rem;">
+            <label for="id_phone" style="font-weight: 500;">Телефон</label>
+            {{ form.phone }}
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 0.7rem;">
+            <label for="id_avatar" style="font-weight: 500;">Аватар</label>
+            {{ form.avatar }}
+        </div>
+        <button type="submit" style="margin-top: 1.2rem; background: #10b981; color: #fff; border: none; border-radius: 8px; padding: 0.8rem 0; font-size: 1.1rem; font-weight: 600; box-shadow: 0 2px 8px rgba(16,185,129,0.08); transition: background 0.18s; cursor: pointer;">Сохранить</button>
+    </form>
+    <a href="{% url 'account' %}" style="display: block; text-align: center; margin-top: 1.5rem; color: #6b7280; text-decoration: none; font-size: 1rem;">← Назад в аккаунт</a>
+</div>
+<style>
+.edit-profile-card input, .edit-profile-card select, .edit-profile-card button {
+    max-width: 320px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+}
+.edit-profile-card input, .edit-profile-card select {
+    border: 1.2px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    font-size: 1.05rem;
+    background: #f9fafb;
+    transition: border-color 0.18s, box-shadow 0.18s;
+}
+.edit-profile-card input:focus, .edit-profile-card select:focus {
+    border-color: #10b981;
+    background: #fff;
+    outline: none;
+    box-shadow: 0 2px 8px rgba(16,185,129,0.08);
+}
+</style>
+{% endblock %} 

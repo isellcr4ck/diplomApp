@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Корзина{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="my-4">Ваша корзина</h2>
+    
+    {% if cart_items %}
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Валюта</th>
+                    <th>Тип операции</th>
+                    <th>Количество</th>
+                    <th>Курс</th>
+                    <th>Сумма</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in cart_items %}
+                <tr>
+                    <td>{{ item.currency.name }}</td>
+                    <td>{{ item.get_operation_type_display }}</td>
+                    <td>{{ item.amount }}</td>
+                    <td>{{ item.rate }}</td>
+                    <td>{{ item.total }}</td>
+                    <td>
+                        <a href="{% url 'remove_from_cart' item.id %}" class="btn btn-sm btn-danger">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="text-end">
+            <form action="{% url 'checkout' %}" method="get" style="display:inline;">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    Перейти к оплате
+                </button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        Ваша корзина пуста. <a href="{% url 'catalog' %}">Перейти к каталогу</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Отзывы клиентов | Currencio{% endblock %}
+
+{% block content %}
+<div class="reviews-container" style="max-width: 800px; margin: 0 auto;">
+    <h1 style="text-align: center; margin-bottom: 2rem;">Отзывы клиентов</h1>
+    {% if user.is_authenticated %}
+    <div class="review-form-card" style="background: #f9fafb; border-radius: 10px; box-shadow: 0 1px 6px rgba(0,0,0,0.04); padding: 1.2rem 1.5rem; margin-bottom: 2.5rem; border: 1.5px solid #e5e7eb;">
+        <h2 style="margin-top:0; margin-bottom: 1.2rem; font-size: 1.25rem; font-weight: 600; color: #059669; text-align: center;">Оставить отзыв</h2>
+        <form method="post" action="" class="review-form" style="display: flex; flex-direction: column; gap: 1rem;">
+            {% csrf_token %}
+            <div>
+                <label for="id_text" style="font-weight: 500;">Ваш отзыв:</label>
+                <textarea name="text" id="id_text" rows="3" placeholder="Поделитесь своим опытом..." class="form-control">{{ form.text.value|default_if_none:'' }}</textarea>
+                {% if form.text.errors %}
+                    <div style="color: #b91c1c; font-size: 0.97rem; margin-top: 0.2rem;">{{ form.text.errors.0 }}</div>
+                {% endif %}
+            </div>
+            <div>
+                <label style="font-weight: 500;">Оценка:</label>
+                <div id="star-rating-form" style="font-size: 2rem; color: #fbbf24; cursor: pointer;">
+                    {% for i in "12345" %}
+                        <i class="bi bi-star" data-value="{{ forloop.counter }}"></i>
+                    {% endfor %}
+                </div>
+                {{ form.rating }}
+            </div>
+            <button type="submit" class="btn btn-primary" style="align-self: flex-end; padding: 0.5rem 2.2rem; font-size: 1.05rem;">Оставить отзыв</button>
+        </form>
+    </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const stars = document.querySelectorAll('#star-rating-form .bi');
+        const ratingInput = document.getElementById('id_rating');
+        let current = 0;
+        function setStars(rating) {
+            stars.forEach((star, idx) => {
+                if (idx < rating) {
+                    star.classList.remove('bi-star');
+                    star.classList.add('bi-star-fill');
+                } else {
+                    star.classList.remove('bi-star-fill');
+                    star.classList.add('bi-star');
+                }
+            });
+        }
+        stars.forEach((star, idx) => {
+            star.addEventListener('mouseenter', () => setStars(idx+1));
+            star.addEventListener('mouseleave', () => setStars(current));
+            star.addEventListener('click', () => {
+                current = idx+1;
+                ratingInput.value = current;
+                setStars(current);
+            });
+        });
+        setStars(current);
+    });
+    </script>
+    {% endif %}
+    {% if reviews %}
+        <div class="reviews-list">
+            {% for review in reviews %}
+            <div class="review-card" style="background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); padding: 1.5rem 2rem; margin-bottom: 2rem; display: flex; gap: 1.5rem; align-items: flex-start;">
+                <div class="review-avatar">
+                    {% if review.user and review.user.avatar %}
+                        <img src="{{ review.user.avatar.url }}" alt="avatar" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover;">
+                    {% else %}
+                        <img src="{% static 'images/avatar-placeholder.png' %}" alt="avatar" style="width: 56px; height: 56px; border-radius: 50%; object-fit: cover;">
+                    {% endif %}
+                </div>
+                <div class="review-content" style="flex:1;">
+                    <div style="display: flex; align-items: center; gap: 0.7rem;">
+                        <span style="font-weight: 600; font-size: 1.1rem;">{{ review.name }}</span>
+                        <span style="color: #888; font-size: 0.95rem;">{{ review.created_at|date:"d.m.Y" }}</span>
+                        <span class="review-rating" style="color: #fbbf24;">
+                            {% for i in "12345" %}
+                                {% if forloop.counter <= review.rating %}
+                                    <i class="bi bi-star-fill"></i>
+                                {% else %}
+                                    <i class="bi bi-star"></i>
+                                {% endif %}
+                            {% endfor %}
+                        </span>
+                    </div>
+                    <div style="margin-top: 0.7rem; font-size: 1.08rem; color: #222;">{{ review.text }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div style="text-align: center; color: #888; font-size: 1.1rem;">Пока нет отзывов.</div>
+    {% endif %}
+</div>
+<style>
+.review-form {
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+.review-form textarea.form-control {
+    max-width: 480px;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
+}
+.review-form-card textarea.form-control {
+    width: 100%;
+    min-height: 90px;
+    border-radius: 8px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    font-size: 1.08rem;
+    padding: 0.8rem 1rem;
+    resize: vertical;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.review-form-card textarea.form-control:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 2px 8px rgba(16,185,129,0.10);
+    background: #f0fdf4;
+}
+</style>
+{% endblock %} 

@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ currency.name }} ({{ currency.code }}) | Currencio{% endblock %}
+{% block content %}
+<style>
+.currency-detail-page {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 60vh;
+    padding: 2rem 0;
+}
+.currency-detail-card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(16,24,40,0.10);
+    padding: 2.5rem 2.5rem 2rem 2.5rem;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    margin: 0 auto;
+}
+.currency-detail-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    overflow: hidden;
+    margin: 0 auto 1.5rem auto;
+    background: #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.currency-detail-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.currency-detail-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+.currency-detail-code {
+    color: #6b7280;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+}
+.currency-detail-rates {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+.currency-rate-block {
+    background: #f3f4f6;
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    flex: 1 1 0;
+    text-align: center;
+}
+.currency-rate-block strong {
+    font-size: 1.25rem;
+    color: #059669;
+    display: block;
+    margin-top: 0.25rem;
+}
+.currency-detail-description {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+}
+.currency-detail-form {
+    margin-top: 1.5rem;
+}
+.currency-detail-form label {
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+.currency-detail-form input[type='number'] {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+.currency-detail-form .btn-group {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+.currency-detail-form button {
+    flex: 1 1 0;
+    padding: 0.75rem 0;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+.currency-detail-form .btn-buy {
+    background: #10b981;
+    color: #fff;
+}
+.currency-detail-form .btn-buy:hover {
+    background: #059669;
+}
+.currency-detail-form .btn-sell {
+    background: #f3f4f6;
+    color: #b91c1c;
+    border: 1px solid #ef4444;
+}
+.currency-detail-form .btn-sell:hover {
+    background: #ef4444;
+    color: #fff;
+}
+</style>
+<div class="currency-detail-page">
+    <div class="currency-detail-card">
+        <div class="currency-detail-icon">
+            {% if currency.icon %}
+                <img src="{{ currency.icon.url }}" alt="{{ currency.name }}">
+            {% else %}
+                <img src="{% static 'images/flags/' %}{{ currency.code|lower }}.png" alt="{{ currency.name }}">
+            {% endif %}
+        </div>
+        <div class="currency-detail-title">{{ currency.name }}</div>
+        <div class="currency-detail-code">{{ currency.code }}</div>
+        <div class="currency-detail-rates">
+            <div class="currency-rate-block">
+                <div>Покупка</div>
+                <strong>{{ currency.buy_rate }}</strong>
+            </div>
+            <div class="currency-rate-block">
+                <div>Продажа</div>
+                <strong>{{ currency.sell_rate }}</strong>
+            </div>
+        </div>
+        <div class="currency-detail-description">
+            {% if currency.description %}{{ currency.description }}{% else %}Описание отсутствует.{% endif %}
+        </div>
+        {% if user.is_authenticated %}
+        <form method="post" class="currency-detail-form">
+            {% csrf_token %}
+            <label for="amount">Сумма:</label>
+            <input type="number" name="amount" id="amount" min="0.01" step="0.01" required>
+            <div class="btn-group">
+                <button type="submit" name="operation_type" value="buy" class="btn-buy">Купить</button>
+                <button type="submit" name="operation_type" value="sell" class="btn-sell">Продать</button>
+            </div>
+        </form>
+        {% else %}
+        <div class="currency-detail-form">
+            <div class="alert alert-warning">Для покупки или продажи войдите в аккаунт.</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Обмен валют | Currencio{% endblock %}
+
+{% block content %}
+<div class="currency-exchange-container" style="width: 100%; padding: 0 5vw; box-sizing: border-box;">
+    <!-- Заголовок и фильтры -->
+    <div class="exchange-header" style="width: 100%;">
+        <h1><i class="bi bi-currency-exchange"></i> Обмен валют</h1>
+        <div class="exchange-controls" style="width: 100%; margin: 32px 0 0 0; display: flex; gap: 1.2rem; align-items: center; flex-wrap: wrap;">
+            <div class="search-box" style="position: relative; flex: 1 1 350px; min-width: 180px; max-width: 500px;">
+                <form method="get" action="" style="width: 100%;">
+                    <i class="bi bi-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 1rem; color: #bdbdbd;"></i>
+                    <input type="text" name="q" placeholder="Поиск валюты..." value="{{ query|default:'' }}" style="width: 100%; height: 38px; font-size: 1.08rem; padding-left: 36px; border-radius: 10px; border: 1.2px solid #e5e7eb; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: border-color 0.18s, box-shadow 0.18s; outline: none;">
+                    {% if query %}
+                        <a href="?" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #bdbdbd; text-decoration: none; font-size: 1.2rem;">&times;</a>
+                    {% endif %}
+                </form>
+            </div>
+            <div class="sort-filter" style="flex-shrink: 0; min-width: 160px;">
+                <form method="get" action="" style="display: flex; align-items: center;">
+                    <input type="hidden" name="q" value="{{ query|default:'' }}">
+                    <select class="form-select" name="sort" onchange="this.form.submit()" style="width: 180px; height: 38px; font-size: 1.08rem; border-radius: 10px; border: 1.2px solid #e5e7eb; background: #fff; color: #222; padding: 0 12px;">
+                        <option value="name-asc" {% if sort == 'name-asc' %}selected{% endif %}>По названию (А-Я)</option>
+                        <option value="name-desc" {% if sort == 'name-desc' %}selected{% endif %}>По названию (Я-А)</option>
+                        <option value="rate-asc" {% if sort == 'rate-asc' %}selected{% endif %}>По курсу (↑)</option>
+                        <option value="rate-desc" {% if sort == 'rate-desc' %}selected{% endif %}>По курсу (↓)</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Основной контент -->
+    <div class="exchange-grid" style="width: 100%; display: flex; gap: 2rem; align-items: flex-start; flex-wrap: nowrap;">
+        <!-- Блок выбора валют -->
+        <div class="currency-selection-card" style="flex: 1 1 350px; min-width: 350px;">
+            <div class="card-header">
+                <h2><i class="bi bi-arrow-left-right"></i> Обмен валют</h2>
+            </div>
+            <form method="post" action="{% url 'exchange' %}" id="exchange-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Отдаю</label>
+                    <div class="currency-input-group">
+                        <input type="number" name="amount" placeholder="0.00" class="amount-input" min="0.01" step="0.01" required id="from-amount">
+                        <select name="from_currency" class="currency-select" id="from-currency">
+                            {% for currency in currencies %}
+                            <option value="{{ currency.id }}">{{ currency.code }} - {{ currency.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="swap-button">
+                    <button type="button" class="btn-swap" id="swap-btn" tabindex="-1">
+                        <i class="bi bi-arrow-down-up"></i>
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label>Получаю</label>
+                    <div class="currency-input-group">
+                        <input type="number" id="receive-amount" placeholder="0.00" class="amount-input" readonly>
+                        <select name="to_currency" class="currency-select" id="to-currency">
+                            {% for currency in currencies %}
+                            <option value="{{ currency.id }}">{{ currency.code }} - {{ currency.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="rate-info">
+                    <span>Курс обмена:</span>
+                    <strong id="exchange-rate-info">—</strong>
+                </div>
+                <input type="hidden" name="operation_type" id="operation_type" value="buy">
+                <button class="btn-exchange" type="submit">
+                    <i class="bi bi-arrow-repeat"></i> Обменять сейчас
+                </button>
+            </form>
+        </div>
+        <!-- Список валют -->
+        <div class="currency-list-card" style="flex: 2 1 600px; min-width: 400px;">
+            <div class="card-header">
+                <h2><i class="bi bi-list-ul"></i> Все валюты</h2>
+                <div class="view-toggle">
+                    <button class="view-option active"><i class="bi bi-grid"></i></button>
+                    <button class="view-option"><i class="bi bi-list-task"></i></button>
+                </div>
+            </div>
+            
+            <div class="currency-grid-view">
+                {% for currency in currencies %}
+                <a href="{% url 'currency_detail' currency.id %}" class="currency-card-link">
+                    <div class="currency-item">
+                        <div class="currency-flag">
+                            {% if currency.icon %}
+                                <img src="{{ currency.icon.url }}" alt="{{ currency.name }}">
+                            {% else %}
+                                <img src="{% static 'images/flags/' %}{{ currency.code|lower }}.png" alt="{{ currency.name }}">
+                            {% endif %}
+                        </div>
+                        <div class="currency-info">
+                            <h3>{{ currency.name }}</h3>
+                            <span class="currency-code">{{ currency.code }}</span>
+                        </div>
+                        <div class="currency-rates">
+                            <div class="rate">
+                                <span>Покупка</span>
+                                <strong>{{ currency.buy_rate }} ₽</strong>
+                            </div>
+                            <div class="rate">
+                                <span>Продажа</span>
+                                <strong>{{ currency.sell_rate }} ₽</strong>
+                            </div>
+                        </div>
+                        <div class="currency-change {% if currency.change >= 0 %}up{% else %}down{% endif %}">
+                            <i class="bi bi-arrow-{% if currency.change >= 0 %}up{% else %}down{% endif %}"></i>
+                            {{ currency.change }}%
+                        </div>
+                        <button class="btn-trade">
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
+                    </div>
+                </a>
+                {% empty %}
+                <div>Нет доступных валют.</div>
+                {% endfor %}
+            </div>
+            
+            <div class="pagination">
+                <button class="page-nav" disabled>
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <span class="page-active">1</span>
+                <button class="page-number">2</button>
+                <button class="page-number">3</button>
+                <button class="page-nav">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Динамика курса переносим вниз -->
+    <div class="chart-card" style="margin-top: 2rem;">
+        <div class="card-header">
+            <h2><i class="bi bi-graph-up"></i> Динамика курса</h2>
+            <div class="chart-period">
+                <button class="period-btn active">Неделя</button>
+                <button class="period-btn">Месяц</button>
+                <button class="period-btn">Год</button>
+            </div>
+        </div>
+        <div class="chart-placeholder">
+            <!-- Здесь будет график -->
+            <img src="{% static 'images/chart-placeholder.png' %}" alt="График курса">
+        </div>
+        <div class="chart-legend">
+            <div class="legend-item">
+                <span class="color-usd"></span>
+                <span>USD/RUB</span>
+            </div>
+            <div class="legend-item">
+                <span class="color-eur"></span>
+                <span>EUR/RUB</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const currencies = {{ currencies_json|safe }};
+    console.log('currencies:', currencies);
+
+    function getCurrencyById(id) {
+        return currencies.find(c => String(c.id) === String(id));
+    }
+
+    function updateExchangeInfo() {
+        const fromCurrencyId = document.getElementById('from-currency').value;
+        const toCurrencyId = document.getElementById('to-currency').value;
+        const fromAmount = parseFloat(document.getElementById('from-amount').value) || 0;
+        const fromCurrency = getCurrencyById(fromCurrencyId);
+        const toCurrency = getCurrencyById(toCurrencyId);
+        let rateText = '—';
+        let receive = '';
+        if (fromCurrency && toCurrency) {
+            // Курс обмена: сколько одной валюты за одну другую
+            const rate = (parseFloat(fromCurrency.sell_rate) / parseFloat(toCurrency.buy_rate));
+            rateText = `1 ${fromCurrency.code} = ${(rate).toFixed(4)} ${toCurrency.code}`;
+            if (fromAmount > 0) {
+                receive = (fromAmount * rate).toFixed(2);
+            }
+        }
+        document.getElementById('exchange-rate-info').textContent = rateText;
+        document.getElementById('receive-amount').value = receive;
+    }
+
+    document.getElementById('from-amount').addEventListener('input', updateExchangeInfo);
+    document.getElementById('from-currency').addEventListener('change', updateExchangeInfo);
+    document.getElementById('to-currency').addEventListener('change', updateExchangeInfo);
+
+    // swap button
+    const swapBtn = document.getElementById('swap-btn');
+    swapBtn.addEventListener('click', function() {
+        const fromSelect = document.getElementById('from-currency');
+        const toSelect = document.getElementById('to-currency');
+        const temp = fromSelect.value;
+        fromSelect.value = toSelect.value;
+        toSelect.value = temp;
+        updateExchangeInfo();
+    });
+
+    // Первоначальный расчёт
+    updateExchangeInfo();
+});
+</script>
+
+<style>
+.currency-flag {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f3f4f6;
+}
+.currency-flag img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+@media (max-width: 600px) {
+  .exchange-controls {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.7rem !important;
+  }
+  .sort-filter {
+    min-width: 0 !important;
+  }
+}
+</style>
+{% endblock %}

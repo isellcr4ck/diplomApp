@@ -1,0 +1,418 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Главная | Currencio{% endblock %}
+
+{% block content %}
+<!-- Герой секция -->
+<section class="hero">
+    <div class="container">
+        <h1 class="hero-title">Современный обмен валют</h1>
+        <p class="hero-description">
+            Обменивайте валюту по выгодному курсу с минимальной комиссией. 
+            Быстро, безопасно и удобно.
+        </p>
+        <a href="/catalog" class="btn btn-primary">
+            Начать обмен <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+</section>
+
+<!-- ExpressJS Currency виджет (виден всем) -->
+<div id="external-currency-widget" style="max-width: 400px; margin: 2rem auto; background: #f9fafb; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); padding: 1.2rem 1.5rem;">
+    <div style="font-weight: 600; font-size: 1.15rem; margin-bottom: 0.7rem;">
+      Курсы валют 
+    </div>
+    <div id="external-currency-list">Загрузка...</div>
+</div>
+
+<script>
+function loadCurrencyList() {
+  fetch('http://localhost:3001/api/currency')
+    .then(r => r.json())
+    .then(data => {
+      let html = '<ul style="padding-left: 1.2rem;">';
+      data.forEach(c => html += `<li style="margin-bottom: 0.3rem;">${c.code}: <b>${c.rate}</b></li>`);
+      html += '</ul>';
+      document.getElementById('external-currency-list').innerHTML = html;
+    })
+    .catch(() => {
+      document.getElementById('external-currency-list').innerHTML = '<span style="color:#b91c1c;">Ошибка загрузки данных с ExpressJS API</span>';
+    });
+}
+loadCurrencyList();
+</script>
+
+{% if user.is_superuser %}
+<!-- История изменений курсов (только для администратора) -->
+<div id="currency-history-widget" style="max-width: 400px; margin: 2rem auto; background: #f3f4f6; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 1.2rem 1.5rem;">
+  <div style="font-weight: 600; font-size: 1.08rem; margin-bottom: 0.7rem;">История изменений курсов</div>
+  <div id="currency-history-list">Загрузка...</div>
+</div>
+<script>
+function loadCurrencyHistory() {
+  fetch('http://localhost:3001/api/currency/history')
+    .then(r => r.json())
+    .then(data => {
+      if (!data.length) {
+        document.getElementById('currency-history-list').innerHTML = 'Нет изменений.';
+        return;
+      }
+      let html = '<ul style="padding-left: 1.2rem;">';
+      data.forEach(item => {
+        const date = new Date(item.changedAt);
+        let actionText = '';
+        if (item.action === 'add') {
+          actionText = '<span style="color:#059669;">Добавлена</span>';
+        } else if (item.action === 'update') {
+          actionText = '<span style="color:#2563eb;">Обновлён курс</span>';
+        }
+        html += `<li style="margin-bottom:0.3rem;">
+          <b>${item.code}</b>: ${item.oldRate !== null ? item.oldRate + ' → ' : ''}<b>${item.newRate}</b>
+          <span style=\"color:#888; font-size:0.95em;\">(${date.toLocaleString('ru-RU')})</span> ${actionText}
+        </li>`;
+      });
+      html += '</ul>';
+      document.getElementById('currency-history-list').innerHTML = html;
+    })
+    .catch(() => {
+      document.getElementById('currency-history-list').innerHTML = '<span style="color:#b91c1c;">Ошибка загрузки истории</span>';
+    });
+}
+loadCurrencyHistory();
+</script>
+{% endif %}
+
+{% if user.is_superuser %}
+<!-- Управление валютами Express API (админ-виджет) -->
+<div id="currency-admin-widget" style="max-width: 400px; margin: 2rem auto; background: #fffbe6; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); padding: 1.2rem 1.5rem;">
+  <div style="font-weight: 600; font-size: 1.08rem; margin-bottom: 0.7rem;">Управление валютами (Express API)</div>
+  <form id="add-currency-form" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+    <input type="text" id="add-code" placeholder="Код (например, GBP)" maxlength="6" style="flex:1; min-width:90px;" required>
+    <input type="number" id="add-rate" placeholder="Курс" step="0.01" style="flex:1; min-width:90px;" required>
+    <button type="submit" style="flex:0 0 auto;">Добавить</button>
+  </form>
+  <form id="update-currency-form" style="margin-bottom: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+    <input type="text" id="update-code" placeholder="Код (например, USD)" maxlength="6" style="flex:1; min-width:90px;" required>
+    <input type="number" id="update-rate" placeholder="Новый курс" step="0.01" style="flex:1; min-width:90px;" required>
+    <button type="submit" style="flex:0 0 auto;">Обновить</button>
+  </form>
+  <form id="delete-currency-form" style="display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center;">
+    <input type="text" id="delete-code" placeholder="Код (например, EUR)" maxlength="6" style="flex:1; min-width:90px;" required>
+    <button type="submit" style="flex:0 0 auto; background:#f87171; color:#fff;">Удалить</button>
+  </form>
+  <div id="currency-admin-msg" style="margin-top:0.7rem; font-size:0.98rem;"></div>
+</div>
+<script>
+// Добавление валюты
+const addForm = document.getElementById('add-currency-form');
+addForm.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const code = document.getElementById('add-code').value.trim();
+  const rate = document.getElementById('add-rate').value;
+  fetch('http://localhost:3001/api/currency', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, rate })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error);
+      document.getElementById('currency-admin-msg').textContent = `Валюта ${data.code} добавлена!`;
+      loadCurrencyList();
+      loadCurrencyHistory();
+      addForm.reset();
+    })
+    .catch(err => {
+      document.getElementById('currency-admin-msg').textContent = 'Ошибка: ' + err.message;
+    });
+});
+
+// Обновление курса
+const updateForm = document.getElementById('update-currency-form');
+updateForm.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const code = document.getElementById('update-code').value.trim();
+  const rate = document.getElementById('update-rate').value;
+  fetch(`http://localhost:3001/api/currency/${code}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ rate })
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error);
+      document.getElementById('currency-admin-msg').textContent = `Курс ${data.code} обновлён!`;
+      loadCurrencyList();
+      loadCurrencyHistory();
+      updateForm.reset();
+    })
+    .catch(err => {
+      document.getElementById('currency-admin-msg').textContent = 'Ошибка: ' + err.message;
+    });
+});
+
+// Удаление валюты
+const deleteForm = document.getElementById('delete-currency-form');
+deleteForm.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const code = document.getElementById('delete-code').value.trim();
+  fetch(`http://localhost:3001/api/currency/${code}`, {
+    method: 'DELETE'
+  })
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) throw new Error(data.error);
+      document.getElementById('currency-admin-msg').textContent = `Валюта ${data.code} удалена!`;
+      loadCurrencyList();
+      deleteForm.reset();
+    })
+    .catch(err => {
+      document.getElementById('currency-admin-msg').textContent = 'Ошибка: ' + err.message;
+    });
+});
+</script>
+{% endif %}
+
+<!-- Популярные валюты -->
+<section class="section">
+    <div class="container">
+        <h2 style="text-align: center; margin-bottom: 1rem;">Популярные валюты</h2>
+        <p style="text-align: center; color: var(--text-light); margin-bottom: 2rem;">
+            Актуальные курсы на {% now "j F Y" %}
+        </p>
+
+        <div class="currency-grid">
+            <!-- USD -->
+            <div class="currency-card">
+                <div class="currency-header">
+                    <img src="{% static 'images/flags/us.png' %}" alt="USD" class="currency-flag">
+                    <div>
+                        <div class="currency-name">Доллар США</div>
+                        <div class="currency-code">USD</div>
+                    </div>
+                </div>
+                <div class="currency-rates">
+                    <div class="rate-row">
+                        <span class="rate-label">Покупка</span>
+                        <span class="rate-value">75.50 ₽</span>
+                    </div>
+                    <div class="rate-row">
+                        <span class="rate-label">Продажа</span>
+                        <span class="rate-value">76.20 ₽</span>
+                    </div>
+                    <div class="rate-row">
+                        <span class="rate-label">Изменение</span>
+                        <span class="rate-change up">
+                            <i class="bi bi-arrow-up"></i> 0.5%
+                        </span>
+                    </div>
+                </div>
+                <a href="/catalog" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">
+                    Обменять
+                </a>
+            </div>
+
+            <!-- EUR -->
+            <div class="currency-card">
+                <div class="currency-header">
+                    <img src="{% static 'images/flags/eu.png' %}" alt="EUR" class="currency-flag">
+                    <div>
+                        <div class="currency-name">Евро</div>
+                        <div class="currency-code">EUR</div>
+                    </div>
+                </div>
+                <div class="currency-rates">
+                    <div class="rate-row">
+                        <span class="rate-label">Покупка</span>
+                        <span class="rate-value">82.30 ₽</span>
+                    </div>
+                    <div class="rate-row">
+                        <span class="rate-label">Продажа</span>
+                        <span class="rate-value">83.10 ₽</span>
+                    </div>
+                    <div class="rate-row">
+                        <span class="rate-label">Изменение</span>
+                        <span class="rate-change down">
+                            <i class="bi bi-arrow-down"></i> 0.3%
+                        </span>
+                    </div>
+                </div>
+                <a href="/catalog" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">
+                    Обменять
+                </a>
+            </div>
+
+            <!-- GBP -->
+            <div class="currency-card">
+                <div class="currency-header">
+                    <img src="{% static 'images/flags/gb.png' %}" alt="GBP" class="currency-flag">
+                    <div>
+                        <div class="currency-name">Фунт стерлингов</div>
+                        <div class="currency-code">GBP</div>
+                    </div>
+                </div>
+                <div class="currency-rates">
+                    <div class="rate-row">
+                        <span class="rate-label">Покупка</span>
+                        <span class="rate-value">95.70 ₽</span>
+                    </div>
+                    <div class="rate-row">
+                        <span class="rate-label">Продажа</span>
+                        <span class="rate-value">96.50 ₽</span>
+                    </div>
+                    <div class="rate-row">
+                        <span class="rate-label">Изменение</span>
+                        <span class="rate-change up">
+                            <i class="bi bi-arrow-up"></i> 0.8%
+                        </span>
+                    </div>
+                </div>
+                <a href="/catalog" class="btn btn-primary" style="width: 100%; margin-top: 1.5rem;">
+                    Обменять
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Преимущества -->
+<section class="section features">
+    <div class="container">
+        <h2 style="text-align: center; margin-bottom: 3rem;">Почему выбирают нас</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="bi bi-lightning"></i>
+                </div>
+                <h3 class="feature-title">Мгновенный обмен</h3>
+                <p class="feature-description">
+                    Операции выполняются за секунды без задержек и ожидания подтверждения
+                </p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="bi bi-shield-lock"></i>
+                </div>
+                <h3 class="feature-title">Безопасность</h3>
+                <p class="feature-description">
+                    Все операции защищены современными технологиями шифрования данных
+                </p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i class="bi bi-percent"></i>
+                </div>
+                <h3 class="feature-title">Низкие комиссии</h3>
+                <p class="feature-description">
+                    Минимальная комиссия 0.5% против 1-2% у большинства конкурентов
+                </p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Как это работает -->
+<section class="section">
+    <div class="container">
+        <div style="max-width: 800px; margin: 0 auto; text-align: center;">
+            <h2 style="margin-bottom: 1.5rem;">Как это работает</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-top: 3rem;">
+                <div>
+                    <div style="width: 60px; height: 60px; background: rgba(16, 185, 129, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: var(--primary); font-size: 1.5rem;">
+                        <i class="bi bi-1-circle"></i>
+                    </div>
+                    <h3 style="font-size: 1.125rem; margin-bottom: 0.5rem;">Выберите валюту</h3>
+                    <p style="color: var(--text-light);">Выберите нужную валютную пару и сумму</p>
+                </div>
+                <div>
+                    <div style="width: 60px; height: 60px; background: rgba(16, 185, 129, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: var(--primary); font-size: 1.5rem;">
+                        <i class="bi bi-2-circle"></i>
+                    </div>
+                    <h3 style="font-size: 1.125rem; margin-bottom: 0.5rem;">Подтвердите операцию</h3>
+                    <p style="color: var(--text-light);">Проверьте детали и подтвердите обмен</p>
+                </div>
+                <div>
+                    <div style="width: 60px; height: 60px; background: rgba(16, 185, 129, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; color: var(--primary); font-size: 1.5rem;">
+                        <i class="bi bi-3-circle"></i>
+                    </div>
+                    <h3 style="font-size: 1.125rem; margin-bottom: 0.5rem;">Получите средства</h3>
+                    <p style="color: var(--text-light);">Ваши средства будут зачислены мгновенно</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+<!-- О нас -->
+<section class="section about">
+    <div class="container" style="max-width: 900px;">
+        <h2 style="text-align: center; margin-bottom: 2rem;">О нас</h2>
+        <p style="font-size: 1.15rem; color: var(--text-light); text-align: center;">
+            Currencio — это современный онлайн-сервис для обмена валют. Мы предлагаем выгодные курсы, мгновенные операции и высокий уровень безопасности. Наша миссия — сделать обмен валют простым, быстрым и доступным для каждого.
+        </p>
+    </div>
+</section>
+<!-- Отзывы клиентов -->
+{% if random_reviews %}
+<section class="section testimonials">
+    <div class="container">
+        <h2 style="text-align: center; margin-bottom: 2rem;">Отзывы клиентов</h2>
+        <div class="testimonials-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem;">
+            {% for review in random_reviews %}
+            <div class="testimonial-card" style="background: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); padding: 1.1rem 1.2rem;">
+                <div class="testimonial-avatar" style="margin-bottom: 0.7rem; text-align: center;">
+                    {% if review.user and review.user.avatar %}
+                        <img src="{{ review.user.avatar.url }}" alt="avatar" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
+                    {% else %}
+                        <img src="{% static 'images/avatar-placeholder.png' %}" alt="avatar" style="width: 36px; height: 36px; border-radius: 50%; object-fit: cover;">
+                    {% endif %}
+                </div>
+                <div class="testimonial-content" style="text-align: center;">
+                    <div style="font-weight: 600; font-size: 1.05rem;">{{ review.name }}</div>
+                    <div style="color: #fbbf24; margin: 0.2rem 0;">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= review.rating %}
+                                <i class="bi bi-star-fill"></i>
+                            {% else %}
+                                <i class="bi bi-star"></i>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                    <div style="font-size: 0.97rem; color: #444; margin-top: 0.3rem;">{{ review.text|truncatechars:90 }}</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+<!-- FAQ -->
+<section class="section faq">
+    <div class="container" style="max-width: 900px;">
+        <h2 style="text-align: center; margin-bottom: 2rem;">Часто задаваемые вопросы</h2>
+        <div class="faq-list">
+            <div class="faq-item">
+                <div class="faq-question"><i class="bi bi-question-circle"></i> Как быстро происходит обмен?</div>
+                <div class="faq-answer">Операция занимает менее минуты после подтверждения.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question"><i class="bi bi-question-circle"></i> Какие комиссии?</div>
+                <div class="faq-answer">Комиссия составляет всего 0.5% от суммы обмена.</div>
+            </div>
+            <div class="faq-item">
+                <div class="faq-question"><i class="bi bi-question-circle"></i> Как обеспечить безопасность?</div>
+                <div class="faq-answer">Все данные шифруются, а операции проходят через защищённые каналы.</div>
+            </div>
+        </div>
+    </div>
+</section>
+{% if not user.is_authenticated %}
+<!-- CTA -->
+<section class="section cta">
+    <div class="container" style="text-align: center;">
+        <h2>Готовы начать обмен?</h2>
+        <a href="/register" class="btn btn-primary btn-lg" style="margin-top: 1rem;">Зарегистрироваться</a>
+    </div>
+</section>
+{% endif %}
+{% endblock %}

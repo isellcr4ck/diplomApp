@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Вход | Currencio{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <h2><i class="bi bi-lock"></i> Вход в аккаунт</h2>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary auth-btn">
+                <i class="bi bi-box-arrow-in-right"></i> Войти
+            </button>
+        </form>
+        <div class="auth-footer">
+            <p>Нет аккаунта? <a href="/register">Зарегистрируйтесь</a></p>
+            <a href="/forgot-password" class="text-muted">Забыли пароль?</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

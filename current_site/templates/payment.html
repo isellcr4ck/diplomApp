@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% block title %}Оплата заказа | Currencio{% endblock %}
+{% block content %}
+<style>
+.payment-page {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 60vh;
+    padding: 2rem 0;
+}
+.payment-card {
+    background: #fff;
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(16,24,40,0.10);
+    padding: 2.5rem 2.5rem 2rem 2.5rem;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    margin: 0 auto;
+}
+.payment-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+}
+.payment-table {
+    width: 100%;
+    margin-bottom: 1.5rem;
+    font-size: 1.1rem;
+}
+.payment-table td {
+    padding: 0.5rem 0;
+}
+.payment-total {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #059669;
+    margin-bottom: 1.5rem;
+}
+.btn-pay {
+    background: #10b981;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 2rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+.btn-pay:hover {
+    background: #059669;
+}
+.payment-title-sell {
+    color: #b91c1c;
+}
+.payment-title-buy {
+    color: #059669;
+}
+</style>
+<div class="payment-page">
+    <div class="payment-card">
+        {% if items and items|length > 0 %}
+            {% with buy_count=0 sell_count=0 %}
+                {% for item in items %}
+                    {% if item.operation_type == 'buy' %}{% widthratio 1 1 1 as buy_count %}{% endif %}
+                    {% if item.operation_type == 'sell' %}{% widthratio 1 1 1 as sell_count %}{% endif %}
+                {% endfor %}
+                {% if buy_count and not sell_count %}
+                    <div class="payment-title payment-title-buy">Оплата покупки валюты</div>
+                {% elif sell_count and not buy_count %}
+                    <div class="payment-title payment-title-sell">Выплата за продажу валюты</div>
+                {% else %}
+                    <div class="payment-title">Операции покупки и продажи</div>
+                {% endif %}
+            {% endwith %}
+        {% else %}
+            <div class="payment-title">Оплата заказа</div>
+        {% endif %}
+        <table class="payment-table">
+            <tr><td>Сумма:</td><td>{{ total|floatformat:2 }} ₽</td></tr>
+            <tr><td>Комиссия (1%):</td><td>{{ commission|floatformat:2 }} ₽</td></tr>
+            <tr><td><strong>Итого к оплате:</strong></td><td><strong>{{ total_to_pay|floatformat:2 }} ₽</strong></td></tr>
+        </table>
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn-pay">
+                {% if items and items.0.operation_type == 'sell' and not items.0.operation_type == 'buy' %}Получить выплату{% else %}Оплатить{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %} 

@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% load static %}
+{% load balance_extras %}
+
+{% block title %}Личный кабинет | Currencio{% endblock %}
+
+{% block content %}
+<div class="account-container">
+    <!-- Заголовок профиля -->
+    <div class="profile-header text-center">
+        <div class="avatar-container">
+            {% if user.avatar %}
+                <img src="{{ user.avatar.url }}" alt="Аватар" class="profile-avatar">
+            {% else %}
+                <img src="{% static 'images/avatar-placeholder.png' %}" alt="Аватар" class="profile-avatar">
+            {% endif %}
+        </div>
+        <h1 class="profile-name">{{ user.get_full_name|default:user.username }}</h1>
+        <p class="profile-email">{{ user.email }}</p>
+    </div>
+
+    <div class="account-edit-link" style="text-align:center; margin-bottom: 1.5rem;">
+        <a href="{% url 'edit_profile' %}" class="btn btn-primary" style="padding: 0.6rem 2.2rem; font-size: 1.1rem; border-radius: 8px; font-weight: 500;">
+            <i class="bi bi-pencil"></i> Редактировать профиль
+        </a>
+    </div>
+
+    <!-- Баланс -->
+    <div class="account-card">
+        <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <i class="bi bi-wallet2"></i>
+                <h3 style="margin: 0;">Ваш баланс</h3>
+            </div>
+            <div class="total-balance-rub" style="font-size: 1.35rem; color: #059669; font-weight: 700; display: flex; align-items: center; gap: 0.3rem;">
+                <i class="bi bi-cash-coin"></i> {{ total_rub|floatformat:2 }} ₽
+            </div>
+        </div>
+        <div class="balance-cards">
+            {% for currency in currencies %}
+                {% if balance|dict_get:currency.code|default:0 != 0 or currency.code in 'USDEURRUBCNY' %}
+                <div class="balance-card">
+                    <div class="currency-icon">
+                        {% if currency.icon %}
+                            <img src="{{ currency.icon.url }}" alt="{{ currency.code }}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;">
+                        {% else %}
+                            {{ currency.code }}
+                        {% endif %}
+                    </div>
+                    <div class="balance-info">
+                        <span class="currency-name">{{ currency.name }}</span>
+                        <span class="balance-amount">{{ balance|dict_get:currency.code|floatformat:2 }} {{ currency.code }}</span>
+                    </div>
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- История операций -->
+    <div class="account-card history-card">
+        <div class="card-header">
+            <i class="bi bi-clock-history"></i>
+            <h3>История операций</h3>
+        </div>
+        <div class="history-list">
+            {% for transaction in transactions %}
+            <div class="history-item">
+                <div class="item-details">
+                    <div class="item-title">
+                        {% if transaction.operation_type == 'buy' %}
+                            <span style="color:#059669;"><i class="bi bi-arrow-down-circle"></i> Покупка</span>
+                        {% elif transaction.operation_type == 'sell' %}
+                            <span style="color:#b91c1c;"><i class="bi bi-arrow-up-circle"></i> Продажа</span>
+                        {% else %}
+                            {{ transaction.get_operation_type_display }}
+                        {% endif %}
+                        {{ transaction.currency.code }}
+                    </div>
+                    <div class="item-date">{{ transaction.created_at|date:"d.m.Y H:i" }}</div>
+                </div>
+                <div class="item-amount">
+                    {{ transaction.amount }} {{ transaction.currency.code }} по {{ transaction.rate }}
+                </div>
+                <div class="item-status">
+                    {{ transaction.status }}
+                </div>
+            </div>
+            {% empty %}
+            <div>Нет операций.</div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}
